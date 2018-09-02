@@ -10,4 +10,8 @@ public class BeanFactory {
     public Object getBean(String name) {
         return singletons.get(name);
     }
+
+    public void instantiate(String basePackage) {
+
+    }
 }
