@@ -1,4 +1,4 @@
-package me.summerframework.beans.factory;
+package me.summerframework.beans.factory.stereotype;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
