@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -24,26 +25,50 @@ public class BeanFactory {
         try {
             Enumeration<URL> resources = classLoader.getResources(path);
             Iterator<URL> iterator = resources.asIterator();
-            while (iterator.hasNext()){
+            while (iterator.hasNext()) {
                 URL url = iterator.next();
                 File file = new File(url.toURI());
-                for(File classFile : file.listFiles()){
-                    String fileName = classFile.getName();//ProductService.class
-                    if(fileName.endsWith(".class")){
-                        String className = fileName.substring(0, fileName.lastIndexOf('.'));
-                        Class classObject = Class.forName(basePackage + "." + className);
-                        if(classObject.isAnnotationPresent(Component.class)){
-                            System.out.println("Component: " + classObject);
-                            Object instance = classObject.newInstance();
-                            String beanName = className.substring(0, 1).toLowerCase() + className.substring(1);
-                            singletons.put(beanName, instance);
-                        }
-                    }
-                }
+
+                Arrays.stream(file.listFiles())
+                    .map(File::getName)
+                    .filter(name -> name.endsWith(".class"))
+                    .map(name -> name.substring(0, name.lastIndexOf('.')))
+                    .map(name -> getaClass(basePackage, name))
+                    .filter(clazz -> clazz.isAnnotationPresent(Component.class))
+                    .map(this::createBean)
+                    .forEach(bean -> {
+                        singletons.put(extractName(bean), bean);
+                    });
             }
         }
-        catch (IOException | URISyntaxException | ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+        catch (IOException | URISyntaxException e) {
             e.printStackTrace();
+        }
+    }
+
+    private String extractName(Object bean) {
+        String className = bean.getClass().getSimpleName();
+        String beanName = className.substring(0, 1).toLowerCase() + className.substring(1);
+        return beanName;
+    }
+
+    private Object createBean(Class classObject) {
+        try {
+            return classObject.newInstance();
+        }
+        catch (InstantiationException | IllegalAccessException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private Class getaClass(String basePackage, String className) {
+        try {
+            return Class.forName(basePackage + "." + className);
+        }
+        catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            return null; //TODO: return optional
         }
     }
 }
