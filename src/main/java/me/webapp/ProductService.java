@@ -1,9 +1,10 @@
 package me.webapp;
 
 import me.summerframework.beans.factory.stereotype.Component;
+import me.summerframework.beans.factory.stereotype.Service;
 
 /** Created by Ravil on 02/09/2018. */
-@Component
+@Service
 public class ProductService {
     private PromotionsService promotionsService;
 

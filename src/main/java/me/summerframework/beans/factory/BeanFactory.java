@@ -9,7 +9,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import me.summerframework.beans.factory.stereotype.Component;
+import me.summerframework.beans.factory.stereotype.Service;
 
 /** Created by Ravil on 02/09/2018. */
 public class BeanFactory {
@@ -34,8 +36,12 @@ public class BeanFactory {
                     .filter(name -> name.endsWith(".class"))
                     .map(name -> name.substring(0, name.lastIndexOf('.')))
                     .map(name -> getaClass(basePackage, name))
-                    .filter(clazz -> clazz.isAnnotationPresent(Component.class))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .filter(this::hasFrameworkAnnotation)
                     .map(this::createBean)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
                     .forEach(bean -> {
                         singletons.put(extractName(bean), bean);
                     });
@@ -46,29 +52,35 @@ public class BeanFactory {
         }
     }
 
-    private String extractName(Object bean) {
-        String className = bean.getClass().getSimpleName();
-        String beanName = className.substring(0, 1).toLowerCase() + className.substring(1);
-        return beanName;
+    private boolean hasFrameworkAnnotation(Class clazz) {
+        return clazz.isAnnotationPresent(Component.class)
+            || clazz.isAnnotationPresent(Service.class);
     }
 
-    private Object createBean(Class classObject) {
+    private String extractName(Object bean) {
+        String className = bean.getClass().getSimpleName();
+        return className.substring(0, 1).toLowerCase() + className.substring(1);
+    }
+
+    private Optional<Object> createBean(Class classObject) {
         try {
-            return classObject.newInstance();
+            Object instance = classObject.newInstance();
+            return Optional.of(instance);
         }
         catch (InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
-            return null;
+            return Optional.empty();
         }
     }
 
-    private Class getaClass(String basePackage, String className) {
+    private Optional<Class> getaClass(String basePackage, String className) {
         try {
-            return Class.forName(basePackage + "." + className);
+            Class<?> clazz = Class.forName(basePackage + "." + className);
+            return Optional.of(clazz);
         }
         catch (ClassNotFoundException e) {
             e.printStackTrace();
-            return null; //TODO: return optional
+            return Optional.empty();
         }
     }
 }
