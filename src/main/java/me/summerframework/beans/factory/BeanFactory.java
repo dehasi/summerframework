@@ -2,6 +2,9 @@ package me.summerframework.beans.factory;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
@@ -10,12 +13,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import me.summerframework.beans.factory.annotation.Autowired;
 import me.summerframework.beans.factory.stereotype.Component;
 import me.summerframework.beans.factory.stereotype.Service;
 
 /** Created by Ravil on 02/09/2018. */
 public class BeanFactory {
     private Map<String, Object> singletons = new HashMap<>();
+    private Map<Class<?>, Object> typeSingletons = new HashMap<>();
 
     public Object getBean(String name) {
         return singletons.get(name);
@@ -44,12 +49,38 @@ public class BeanFactory {
                     .map(Optional::get)
                     .forEach(bean -> {
                         singletons.put(extractName(bean), bean);
+                        typeSingletons.put(bean.getClass(), bean);
                     });
             }
         }
         catch (IOException | URISyntaxException e) {
             e.printStackTrace();
         }
+    }
+
+    public void populateProperties() {
+        System.out.println("==populateProperties==");
+        singletons.values().forEach(bean -> {
+            for (Field field : bean.getClass().getDeclaredFields()) {
+                if (field.isAnnotationPresent(Autowired.class)){
+                    Object dependency = typeSingletons.get(field.getType());
+                    String name = field.getName();
+                    System.out.println(name);
+                    String setterName = "set" +
+                        name.substring(0,1).toUpperCase() +
+                        name.substring(1);
+
+                    System.out.println(setterName);
+                    try {
+                        Method method =  bean.getClass().getMethod(setterName, dependency.getClass());
+                        method.invoke(bean, dependency);
+                    }
+                    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
     }
 
     private boolean hasFrameworkAnnotation(Class clazz) {
